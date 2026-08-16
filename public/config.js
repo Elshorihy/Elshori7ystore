@@ -1,8 +1,10 @@
 window.ELSHORI7Y_FIREBASE_CONFIG = {
-  apiKey: "PUT_API_KEY_HERE",
-  authDomain: "PUT_AUTH_DOMAIN_HERE",
-  projectId: "PUT_PROJECT_ID_HERE",
-  storageBucket: "PUT_STORAGE_BUCKET_HERE",
-  messagingSenderId: "PUT_SENDER_ID_HERE",
-  appId: "PUT_APP_ID_HERE"
+  apiKey: "AIzaSyB_QGDcj0N-vka-QiqCTvR5IbReMp4W8Yo",
+  authDomain: "elshori7y-web.firebaseapp.com",
+  databaseURL: "https://elshori7y-web-default-rtdb.firebaseio.com",
+  projectId: "elshori7y-web",
+  storageBucket: "elshori7y-web.firebasestorage.app",
+  messagingSenderId: "575090467505",
+  appId: "1:575090467505:web:e35e20a2a00d2359947890",
+  measurementId: "G-1T82WPQJKK"
 };
