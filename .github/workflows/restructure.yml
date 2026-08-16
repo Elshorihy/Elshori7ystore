@@ -1,0 +1,65 @@
+name: Restructure Elshori7y
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  restructure:
+    if: ${{ !contains(github.event.head_commit.message, '[restructure-done]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Arrange project files
+        shell: bash
+        run: |
+          set -e
+          mkdir -p public src/components src/pages src/services src/firebase src/utils src/styles
+
+          for f in Icons.jsx Layout.jsx Toast.jsx Ui.jsx; do
+            [ -f "$f" ] && git mv "$f" "src/components/$f"
+          done
+
+          for f in AI.jsx Admin.jsx AppDetails.jsx Apps.jsx Auth.jsx Community.jsx Developer.jsx Home.jsx NotFound.jsx Notifications.jsx Profile.jsx Search.jsx; do
+            [ -f "$f" ] && git mv "$f" "src/pages/$f"
+          done
+
+          [ -f AuthContext.jsx ] && git mv AuthContext.jsx src/services/AuthContext.jsx
+          [ -f auth.js ] && git mv auth.js src/services/auth.js
+          [ -f firestore.js ] && git mv firestore.js src/services/firestore.js
+          [ -f storage.js ] && git mv storage.js src/services/storage.js
+          [ -f helpers.js ] && git mv helpers.js src/utils/helpers.js
+          [ -f app.css ] && git mv app.css src/styles/app.css
+          [ -f config.js ] && git mv config.js public/config.js
+
+          cat > src/firebase/config.js <<'EOF'
+          import { initializeApp } from 'firebase/app';
+          import { getAuth } from 'firebase/auth';
+          import { getFirestore } from 'firebase/firestore';
+          import { getStorage } from 'firebase/storage';
+
+          const firebaseConfig = window.ELSHORI7Y_FIREBASE_CONFIG;
+
+          if (!firebaseConfig || firebaseConfig.apiKey === 'PUT_API_KEY_HERE') {
+            console.warn('Elshori7y: Firebase config is not configured yet. Update public/config.js.');
+          }
+
+          const app = initializeApp(firebaseConfig || {});
+          export const auth = getAuth(app);
+          export const db = getFirestore(app);
+          export const storage = getStorage(app);
+          export default app;
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "chore: finish project restructure [restructure-done]"
+          git push
