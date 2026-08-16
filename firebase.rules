@@ -1,0 +1,3 @@
+# Firebase configuration notes
+# Deploy Firestore rules with: firebase deploy --only firestore:rules
+# Deploy Storage rules with: firebase deploy --only storage
