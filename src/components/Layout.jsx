@@ -1,2 +1,131 @@
-import {NavLink,useNavigate,useLocation} from 'react-router-dom';import {useEffect,useState} from 'react';import {Home,Store,Users,Bot,Search,Menu,X,Bell,User,LogOut,Plus,Shield} from './Icons';import {logout} from '../services/auth';import {useAuth} from '../services/AuthContext';import {useToast} from './Toast';
-export default function Layout({children}){const [open,setOpen]=useState(false);const [q,setQ]=useState('');const nav=useNavigate();const location=useLocation();const {user,profile}=useAuth();const toast=useToast();useEffect(()=>setOpen(false),[location.pathname]);const links=[['/','الرئيسية',Home],['/apps','متجر التطبيقات',Store],['/community','المجتمع',Users],['/ai','الذكاء الاصطناعي',Bot]];const submit=e=>{e.preventDefault();if(q.trim())nav(`/search?q=${encodeURIComponent(q.trim())}`)};return <div className="app-shell"><header className="topbar"><div className="nav-wrap"><button className="icon-btn mobile-only" onClick={()=>setOpen(!open)} aria-label="القائمة">{open?<X/>:<Menu/>}</button><NavLink to="/" className="brand"><span className="brand-mark">E</span><span>Elshori7y</span></NavLink><nav className={`main-nav ${open?'open':''}`}>{links.map(([to,label,Icon])=><NavLink key={to} to={to} className="nav-link"><Icon size={18}/>{label}</NavLink>)}</nav><form className="search-box" onSubmit={submit}><Search size={18}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="ابحث عن تطبيق أو منشور..."/></form><div className="actions">{user&&<NavLink to="/notifications" className="icon-btn" title="الإشعارات"><Bell/></NavLink>}{user?<div className="user-actions"><NavLink to={`/profile/${user.uid}`} className="avatar mini">{profile?.avatar?<img src={profile.avatar} alt=""/>:<User/>}</NavLink><div className="user-menu"><NavLink to={`/profile/${user.uid}`}><User/> الملف الشخصي</NavLink>{['developer','admin'].includes(profile?.role)&&<NavLink to="/developer"><Plus/> لوحة المطور</NavLink>}{profile?.role==='admin'&&<NavLink to="/admin"><Shield/> لوحة الإدارة</NavLink>}<button onClick={async()=>{await logout();toast.push('تم تسجيل الخروج');nav('/')}}><LogOut/> تسجيل الخروج</button></div></div>:<><NavLink to="/login" className="btn btn-ghost">دخول</NavLink><NavLink to="/register" className="btn btn-primary">إنشاء حساب</NavLink></>}</div></div></div></header><main>{children}</main><footer className="footer"><div><div className="brand"><span className="brand-mark">E</span><span>Elshori7y</span></div><p>منصة عربية تجمع التطبيقات والمجتمع في مكان واحد.</p></div><div><b>المنصة</b><NavLink to="/apps">التطبيقات</NavLink><NavLink to="/community">المجتمع</NavLink><NavLink to="/ai">الذكاء الاصطناعي</NavLink></div><div><b>الحساب</b><NavLink to="/login">تسجيل الدخول</NavLink><NavLink to="/register">إنشاء حساب</NavLink></div><div className="footer-bottom">© {new Date().getFullYear()} Elshori7y — جميع الحقوق محفوظة.</div></footer></div>}
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Home, Store, Users, Bot, Search, Menu, X, Bell, User, LogOut, Plus, Shield } from './Icons';
+import { logout } from '../services/auth';
+import { useAuth } from '../services/AuthContext';
+import { useToast } from './Toast';
+
+export default function Layout({ children }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const nav = useNavigate();
+  const location = useLocation();
+  const { user, profile } = useAuth();
+  const toast = useToast();
+
+  useEffect(() => setOpen(false), [location.pathname]);
+
+  const links = [
+    ['/', 'الرئيسية', Home],
+    ['/apps', 'متجر التطبيقات', Store],
+    ['/community', 'المجتمع', Users],
+    ['/ai', 'الذكاء الاصطناعي', Bot]
+  ];
+
+  const submit = (e) => {
+    e.preventDefault();
+    const value = q.trim();
+    if (value) nav(`/search?q=${encodeURIComponent(value)}`);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.push('تم تسجيل الخروج');
+      nav('/');
+    } catch (error) {
+      toast.push(error.message || 'تعذر تسجيل الخروج', 'error');
+    }
+  };
+
+  return (
+    <div className="app-shell">
+      <header className="topbar">
+        <div className="nav-wrap">
+          <button className="icon-btn mobile-only" onClick={() => setOpen(!open)} aria-label="القائمة">
+            {open ? <X /> : <Menu />}
+          </button>
+
+          <NavLink to="/" className="brand">
+            <span className="brand-mark">E</span>
+            <span>Elshori7y</span>
+          </NavLink>
+
+          <nav className={`main-nav ${open ? 'open' : ''}`}>
+            {links.map(([to, label, Icon]) => (
+              <NavLink key={to} to={to} className="nav-link">
+                <Icon size={18} />
+                {label}
+              </NavLink>
+            ))}
+          </nav>
+
+          <form className="search-box" onSubmit={submit}>
+            <Search size={18} />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="ابحث عن تطبيق أو منشور..."
+              aria-label="البحث"
+            />
+          </form>
+
+          <div className="actions">
+            {user && (
+              <NavLink to="/notifications" className="icon-btn" title="الإشعارات" aria-label="الإشعارات">
+                <Bell />
+              </NavLink>
+            )}
+
+            {user ? (
+              <div className="user-actions">
+                <NavLink to={`/profile/${user.uid}`} className="avatar mini" aria-label="الملف الشخصي">
+                  {profile?.avatar ? <img src={profile.avatar} alt="" /> : <User />}
+                </NavLink>
+                <div className="user-menu">
+                  <NavLink to={`/profile/${user.uid}`}><User /> الملف الشخصي</NavLink>
+                  {['developer', 'admin'].includes(profile?.role) && (
+                    <NavLink to="/developer"><Plus /> لوحة المطور</NavLink>
+                  )}
+                  {profile?.role === 'admin' && (
+                    <NavLink to="/admin"><Shield /> لوحة الإدارة</NavLink>
+                  )}
+                  <button onClick={handleLogout}><LogOut /> تسجيل الخروج</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <NavLink to="/login" className="btn btn-ghost">دخول</NavLink>
+                <NavLink to="/register" className="btn btn-primary">إنشاء حساب</NavLink>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <main>{children}</main>
+
+      <footer className="footer">
+        <div>
+          <div className="brand">
+            <span className="brand-mark">E</span>
+            <span>Elshori7y</span>
+          </div>
+          <p>منصة عربية تجمع التطبيقات والمجتمع في مكان واحد.</p>
+        </div>
+        <div>
+          <b>المنصة</b>
+          <NavLink to="/apps">التطبيقات</NavLink>
+          <NavLink to="/community">المجتمع</NavLink>
+          <NavLink to="/ai">الذكاء الاصطناعي</NavLink>
+        </div>
+        <div>
+          <b>الحساب</b>
+          <NavLink to="/login">تسجيل الدخول</NavLink>
+          <NavLink to="/register">إنشاء حساب</NavLink>
+        </div>
+        <div className="footer-bottom">© {new Date().getFullYear()} Elshori7y — جميع الحقوق محفوظة.</div>
+      </footer>
+    </div>
+  );
+}
