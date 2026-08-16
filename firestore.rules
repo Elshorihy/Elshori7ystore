@@ -1,34 +1,103 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
-    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
-    function isAdmin() { return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; }
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function userRole() {
+      return signedIn()
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : null;
+    }
+
+    function isDeveloper() {
+      return userRole() in ['developer', 'admin'];
+    }
+
+    function isAdmin() {
+      return userRole() == 'admin';
+    }
+
     match /users/{uid} {
       allow read: if signedIn();
-      allow create: if isOwner(uid);
-      allow update: if isOwner(uid) || isAdmin();
-      allow delete: if isAdmin() || isOwner(uid);
-      match /notifications/{nid} { allow read, update: if isOwner(uid) || isAdmin(); allow create: if signedIn(); allow delete: if isOwner(uid) || isAdmin(); }
+      allow create: if isOwner(uid)
+        && request.resource.data.role == 'user'
+        && request.resource.data.uid == uid;
+      allow update: if isAdmin()
+        || (isOwner(uid)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['displayName', 'username', 'avatar', 'bio']));
+      allow delete: if isAdmin();
+
+      match /notifications/{nid} {
+        allow read, update, delete: if isOwner(uid) || isAdmin();
+        allow create: if signedIn();
+      }
     }
+
     match /apps/{id} {
-      allow read: if resource.data.status == 'approved' || (signedIn() && (resource.data.developerId == request.auth.uid || isAdmin()));
-      allow create: if signedIn() && request.resource.data.developerId == request.auth.uid;
-      allow update: if signedIn() && (resource.data.developerId == request.auth.uid || isAdmin());
-      allow delete: if signedIn() && (resource.data.developerId == request.auth.uid || isAdmin());
+      allow read: if resource.data.status == 'approved'
+        || (signedIn() && (resource.data.developerId == request.auth.uid || isAdmin()));
+      allow create: if isDeveloper()
+        && request.resource.data.developerId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow update: if isAdmin()
+        || (isDeveloper()
+          && resource.data.developerId == request.auth.uid
+          && request.resource.data.developerId == resource.data.developerId
+          && request.resource.data.status == resource.data.status);
+      allow delete: if isAdmin()
+        || (isDeveloper() && resource.data.developerId == request.auth.uid);
     }
+
     match /posts/{id} {
       allow read: if resource.data.status == 'published' || signedIn();
-      allow create: if signedIn() && request.resource.data.authorId == request.auth.uid;
-      allow update, delete: if signedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+      allow create: if signedIn()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.status == 'published';
+      allow update: if isAdmin()
+        || (signedIn() && resource.data.authorId == request.auth.uid
+          && request.resource.data.authorId == resource.data.authorId
+          && request.resource.data.status == resource.data.status)
+        || (signedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likeCount'])
+          && (
+            (request.resource.data.likeCount == resource.data.likeCount + 1
+              && request.resource.data.likedBy.hasAll([request.auth.uid]))
+            ||
+            (request.resource.data.likeCount == resource.data.likeCount - 1
+              && resource.data.likedBy.hasAll([request.auth.uid]))
+          ));
+      allow delete: if isAdmin() || (signedIn() && resource.data.authorId == request.auth.uid);
+
       match /comments/{cid} {
         allow read: if signedIn();
         allow create: if signedIn() && request.resource.data.authorId == request.auth.uid;
-        allow update, delete: if signedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+        allow update, delete: if isAdmin()
+          || (signedIn() && resource.data.authorId == request.auth.uid);
       }
     }
-    match /reports/{id} { allow create: if signedIn(); allow read, update, delete: if isAdmin(); }
-    match /categories/{id} { allow read: if true; allow write: if isAdmin(); }
-    match /downloads/{id} { allow create: if signedIn(); allow read: if signedIn(); }
+
+    match /reports/{id} {
+      allow create: if signedIn();
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /categories/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /downloads/{id} {
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+    }
   }
 }
