@@ -1,27 +1,15 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(uid) {
-      return signedIn() && request.auth.uid == uid;
-    }
-
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
     function userRole() {
       return signedIn()
         ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
         : null;
     }
-
-    function isDeveloper() {
-      return userRole() in ['developer', 'admin'];
-    }
-
-    function isAdmin() {
-      return userRole() == 'admin';
-    }
+    function isDeveloper() { return userRole() in ['developer', 'admin']; }
+    function isAdmin() { return userRole() == 'admin'; }
 
     match /users/{uid} {
       allow read: if signedIn();
@@ -38,7 +26,7 @@ service cloud.firestore {
 
       match /notifications/{nid} {
         allow read, update, delete: if isOwner(uid) || isAdmin();
-        allow create: if signedIn();
+        allow create: if signedIn() && request.resource.data.actorId == request.auth.uid;
       }
     }
 
@@ -80,8 +68,7 @@ service cloud.firestore {
       match /comments/{cid} {
         allow read: if signedIn();
         allow create: if signedIn() && request.resource.data.authorId == request.auth.uid;
-        allow update, delete: if isAdmin()
-          || (signedIn() && resource.data.authorId == request.auth.uid);
+        allow update, delete: if isAdmin() || (signedIn() && resource.data.authorId == request.auth.uid);
       }
     }
 
